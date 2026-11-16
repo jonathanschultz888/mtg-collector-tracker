@@ -111,8 +111,46 @@ export function estimateShippingCad(listing, userRegion, fxRate) {
 
 export async function runMarketScan({ postalCode, priceGoalCad }) {
   const userRegion = detectPostalRegion(postalCode);
-  const { rate: fxRate, live: fxLive } = await fetchUsdToCadRate();
-  const inStockListings = STORE_LISTINGS.filter((l) => l.inStock === true);
+  let fxRate = 1.40;
+  let fxLive = false;
+  let liveServerItems = null;
+
+  try {
+    const apiRes = await fetch(
+      `/api/scan?postalCode=${encodeURIComponent(postalCode)}&priceGoalCad=${encodeURIComponent(priceGoalCad)}`
+    );
+    if (apiRes.ok) {
+      const apiData = await apiRes.json();
+      if (apiData?.fxRate) {
+        fxRate = apiData.fxRate;
+        fxLive = true;
+      }
+      if (Array.isArray(apiData?.liveItems) && apiData.liveItems.length > 0) {
+        liveServerItems = apiData.liveItems.map((item) => {
+          const matchedCode =
+            Object.keys(MTG_SETS).find((code) =>
+              item.title.toLowerCase().includes(MTG_SETS[code].name.split(':')[0].toLowerCase())
+            ) || 'fdn';
+          return {
+            ...item,
+            setCode: matchedCode,
+            historicalLowCad: +(item.basePrice * 0.92).toFixed(2),
+            promo: null,
+          };
+        });
+      }
+    }
+  } catch {
+    // Fallback to client-side FX + catalog
+  }
+
+  if (!fxLive) {
+    const fx = await fetchUsdToCadRate();
+    fxRate = fx.rate;
+    fxLive = fx.live;
+  }
+
+  const inStockListings = liveServerItems || STORE_LISTINGS.filter((l) => l.inStock === true);
   const setCodes = inStockListings.map((l) => l.setCode);
   const chaseMap = await fetchSetChaseData(setCodes);
 
