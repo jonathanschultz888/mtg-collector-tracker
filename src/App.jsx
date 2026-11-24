@@ -44,10 +44,41 @@ function HighlightCard({ title, subtitle, item, icon: Icon, accentClass, badgeTe
         </div>
         <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
 
-        <h3 className="mt-3 text-lg font-bold text-white leading-snug">{item.setName}</h3>
-        <p className="text-xs text-slate-400 mt-0.5">
-          {item.storeName} ({item.storeCountry}) · {item.sourceTag}
-        </p>
+        <div className="mt-3 flex items-start gap-3">
+          {item.imageUrl && (
+            <img
+              src={item.imageUrl}
+              alt={item.setName}
+              className="w-16 h-20 object-contain rounded-lg bg-slate-950/80 border border-slate-800 p-1 shrink-0"
+            />
+          )}
+          <div>
+            <h3 className="text-base font-bold text-white leading-snug">{item.setName}</h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {item.storeName} ({item.storeCountry}) · {item.sourceTag}
+            </p>
+          </div>
+        </div>
+
+        {item.top3Chases && item.top3Chases.length > 0 && (
+          <div className="mt-3 rounded-xl bg-slate-950/70 border border-slate-800/80 p-2.5">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+              Top 3 Chase Cards (Market CAD)
+            </div>
+            <ul className="space-y-1">
+              {item.top3Chases.map((c, i) => (
+                <li key={i} className="flex items-center justify-between text-xs">
+                  <span className="text-slate-200 truncate pr-2">
+                    {i + 1}. {c.name}
+                  </span>
+                  <span className="font-semibold text-amber-400 shrink-0">
+                    ${Number(c.priceCad).toFixed(2)} CAD
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {item.promo && (
           <div className="mt-2.5 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 text-xs font-medium">

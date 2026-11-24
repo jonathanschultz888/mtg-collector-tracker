@@ -34,10 +34,18 @@ async function verifyProductPageStock(store, product) {
     const availableVariant = (full.variants || []).find((v) => v.available === true);
     if (!full.available || !availableVariant) return null;
 
+    const rawImg = full.featured_image || full.images?.[0] || null;
+    const imageUrl = rawImg
+      ? rawImg.startsWith('//')
+        ? `https:${rawImg}`
+        : rawImg
+      : null;
+
     return {
       id: `${store.domain}-${full.id}`,
       inStock: true,
       title: full.title,
+      imageUrl,
       storeName: store.name,
       storeCountry: store.country,
       storeRegion: store.region,

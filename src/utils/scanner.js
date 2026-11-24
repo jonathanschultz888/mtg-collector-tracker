@@ -1,5 +1,44 @@
 import { MTG_SETS, STORE_LISTINGS } from '../data/mtgCatalog';
 
+const SET_TITLE_KEYWORDS = [
+  ['zendikar rising', 'znr'],
+  ['throne of eldraine', 'eld'],
+  ['core set 2021', 'm21'],
+  ['dominaria united', 'dmu'],
+  ['midnight hunt', 'mid'],
+  ['crimson vow', 'vow'],
+  ['commander legends', 'cmr'],
+  ['double masters 2022', '2x2'],
+  ['final fantasy', 'fin'],
+  ['doctor who', 'who'],
+  ['spider-man', 'spm'],
+  ['foundations', 'fdn'],
+  ['duskmourn', 'dsk'],
+  ['bloomburrow', 'blb'],
+  ['modern horizons 3', 'mh3'],
+  ['thunder junction', 'otj'],
+  ['karlov manor', 'mkm'],
+  ['ixalan', 'lci'],
+  ['wilds of eldraine', 'woe'],
+  ['lord of the rings', 'ltr'],
+  ['commander masters', 'cmm'],
+  ['kamigawa', 'neo'],
+  ['streets of new capenna', 'snc'],
+  ['phyrexia', 'one'],
+  ['march of the machine', 'mom'],
+  ['brothers\' war', 'bro'],
+  ['aetherdrift', 'dft'],
+  ['tarkir', 'tdm'],
+];
+
+function matchSetCodeFromTitle(title) {
+  const lower = (title || '').toLowerCase();
+  for (const [keyword, code] of SET_TITLE_KEYWORDS) {
+    if (lower.includes(keyword)) return code;
+  }
+  return 'fdn';
+}
+
 export function detectPostalRegion(postalCode) {
   const clean = (postalCode || '').trim().toUpperCase();
   if (/^[A-Z]\d[A-Z][ -]?\d[A-Z]\d$/.test(clean)) {
@@ -63,15 +102,20 @@ export async function fetchSetChaseData(setCodes) {
           }
         }
         const res = await fetch(
-          `https://api.scryfall.com/cards/search?q=set:${code}+usd>=10&order=usd`
+          `https://api.scryfall.com/cards/search?q=set:${code}+usd>=5&order=usd`
         );
         if (!res.ok) throw new Error('Scryfall error');
         const json = await res.json();
-        const topCard = json.data?.[0];
+        const topCards = (json.data || []).slice(0, 3).map((c) => ({
+          name: c.name,
+          priceUsd: c.prices?.usd ? parseFloat(c.prices.usd) : null,
+        }));
+        const topCard = topCards[0];
         const data = {
           chaseCount: json.total_cards || fallback.fallbackChaseCount,
           topChase: topCard ? topCard.name : fallback.topChase,
-          topChaseUsd: topCard?.prices?.usd ? parseFloat(topCard.prices.usd) : null,
+          topChaseUsd: topCard?.priceUsd || null,
+          top3Chases: topCards,
           live: true,
         };
         localStorage.setItem(cacheKey, JSON.stringify({ data, ts: Date.now() }));
@@ -81,6 +125,7 @@ export async function fetchSetChaseData(setCodes) {
           chaseCount: fallback.fallbackChaseCount,
           topChase: fallback.topChase,
           topChaseUsd: null,
+          top3Chases: [{ name: fallback.topChase, priceUsd: null }],
           live: false,
         };
       }
@@ -126,18 +171,12 @@ export async function runMarketScan({ postalCode, priceGoalCad }) {
         fxLive = true;
       }
       if (Array.isArray(apiData?.liveItems) && apiData.liveItems.length > 0) {
-        liveServerItems = apiData.liveItems.map((item) => {
-          const matchedCode =
-            Object.keys(MTG_SETS).find((code) =>
-              item.title.toLowerCase().includes(MTG_SETS[code].name.split(':')[0].toLowerCase())
-            ) || 'fdn';
-          return {
-            ...item,
-            setCode: matchedCode,
-            historicalLowCad: +(item.basePrice * 0.92).toFixed(2),
-            promo: null,
-          };
-        });
+        liveServerItems = apiData.liveItems.map((item) => ({
+          ...item,
+          setCode: matchSetCodeFromTitle(item.title),
+          historicalLowCad: +(item.basePrice * 0.92).toFixed(2),
+          promo: null,
+        }));
       }
     }
   } catch {
@@ -218,7 +257,11 @@ export async function runMarketScan({ postalCode, priceGoalCad }) {
       pctAboveLow,
       chaseCount: chase.chaseCount,
       topChase: chase.topChase,
-      topChaseCad: chase.topChaseUsd ? +(chase.topChaseUsd * fxRate).toFixed(0) : setInfo.topChaseCad,
+      topChaseCad: chase.topChaseUsd ? +(chase.topChaseUsd * fxRate).toFixed(0) : (setInfo?.topChaseCad || 50),
+      top3Chases: (chase.top3Chases || []).map((c) => ({
+        name: c.name,
+        priceCad: c.priceUsd ? +(c.priceUsd * fxRate).toFixed(2) : (setInfo?.topChaseCad || 50),
+      })),
       scryfallLive: chase.live,
       bangScore,
       meetsGoal,
