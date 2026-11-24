@@ -203,7 +203,7 @@ export async function runMarketScan({ postalCode, priceGoalCad }) {
 
     return {
       ...listing,
-      setName: setInfo.name,
+      setName: listing.title || setInfo.name,
       basePriceCad,
       promoDiscountCad,
       effectivePackPriceCad,
