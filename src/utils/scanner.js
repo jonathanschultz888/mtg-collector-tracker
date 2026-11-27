@@ -154,15 +154,16 @@ export function estimateShippingCad(listing, userRegion, fxRate) {
   }
 }
 
-export async function runMarketScan({ postalCode, priceGoalCad }) {
+export async function runMarketScan({ postalCode, priceGoalCad, productType = 'collector_pack' }) {
   const userRegion = detectPostalRegion(postalCode);
+  const maxFlexBudgetCad = +(priceGoalCad * 1.2).toFixed(2);
   let fxRate = 1.40;
   let fxLive = false;
   let liveServerItems = null;
 
   try {
     const apiRes = await fetch(
-      `/api/scan?postalCode=${encodeURIComponent(postalCode)}&priceGoalCad=${encodeURIComponent(priceGoalCad)}`
+      `/api/scan?postalCode=${encodeURIComponent(postalCode)}&priceGoalCad=${encodeURIComponent(priceGoalCad)}&productType=${encodeURIComponent(productType)}`
     );
     if (apiRes.ok) {
       const apiData = await apiRes.json();
@@ -215,8 +216,8 @@ export async function runMarketScan({ postalCode, priceGoalCad }) {
     const shippingCad = estimateShippingCad(listing, userRegion, fxRate);
     const totalLandedCad = +(effectivePackPriceCad + shippingCad).toFixed(2);
 
-    // Use the whole Price Goal as a session budget to hit store Free Shipping / Promo thresholds
-    const maxQty = Math.max(1, Math.floor(priceGoalCad / Math.max(1, effectivePackPriceCad)));
+    // Use the whole Price Goal (up to +20% flex) to hit store Free Shipping / Promo thresholds
+    const maxQty = Math.max(1, Math.floor(maxFlexBudgetCad / Math.max(1, effectivePackPriceCad)));
     const bundleSubtotalCad = +(maxQty * effectivePackPriceCad).toFixed(2);
     const freeShippingUnlocked = bundleSubtotalCad >= listing.shipping.freeOverCad;
     const effectiveBundleShippingCad = freeShippingUnlocked ? 0 : shippingCad;
@@ -238,7 +239,7 @@ export async function runMarketScan({ postalCode, priceGoalCad }) {
     const promoBonus = (promoDiscountCad > 0 ? 5 : 0) + (freeShippingUnlocked ? 6 : 0);
     const bangScore = Math.min(99, Math.round(lowScore + chaseScore + shippingScore + promoBonus));
 
-    const meetsGoal = effectivePackPriceCad <= priceGoalCad;
+    const meetsGoal = effectivePackPriceCad <= maxFlexBudgetCad;
 
     return {
       ...listing,

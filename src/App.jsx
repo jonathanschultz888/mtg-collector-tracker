@@ -142,6 +142,7 @@ export default function App() {
   });
 
   const [priceGoalCad, setPriceGoalCad] = useState(50);
+  const [productType, setProductType] = useState('collector_pack');
   const [loading, setLoading] = useState(false);
   const [scanResult, setScanResult] = useState(null);
 
@@ -157,6 +158,7 @@ export default function App() {
       const res = await runMarketScan({
         postalCode,
         priceGoalCad: Number(priceGoalCad) || 50,
+        productType,
       });
       setScanResult(res);
     } finally {
@@ -252,37 +254,58 @@ export default function App() {
             onSubmit={handleScan}
             className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-slate-900 p-3 rounded-2xl border border-slate-800"
           >
-            <div className="sm:col-span-5 flex items-center gap-2.5 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2">
+            <div className="sm:col-span-3 flex items-center gap-2.5 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2">
               <MapPin className="w-4 h-4 text-amber-400 shrink-0" />
               <div className="w-full">
                 <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
-                  Ship To Postal / ZIP ("Me")
+                  Ship To Postal / ZIP
                 </label>
                 <input
                   type="text"
                   value={postalCode}
                   onChange={(e) => setPostalCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. H2X 1Y4 or 10001"
+                  placeholder="e.g. H2X 1Y4"
                   className="w-full bg-transparent text-sm font-semibold text-white focus:outline-none"
                 />
               </div>
               {scanResult && (
                 <span className="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 shrink-0">
-                  {scanResult.userRegion.province}, {scanResult.userRegion.country}
+                  {scanResult.userRegion.province}
                 </span>
               )}
             </div>
 
             <div className="sm:col-span-4 flex items-center gap-2.5 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2">
+              <Sparkles className="w-4 h-4 text-violet-400 shrink-0" />
+              <div className="w-full">
+                <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
+                  Product Type
+                </label>
+                <select
+                  value={productType}
+                  onChange={(e) => setProductType(e.target.value)}
+                  className="w-full bg-slate-950 text-sm font-semibold text-white focus:outline-none cursor-pointer"
+                >
+                  <option value="any">Any MTG Product</option>
+                  <option value="collector_pack">Collector Booster Packs</option>
+                  <option value="regular_pack">Regular Booster Packs</option>
+                  <option value="bundle">Bundles</option>
+                  <option value="booster_box">Booster Boxes</option>
+                  <option value="collector_box">Collector Booster Boxes</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="sm:col-span-3 flex items-center gap-2.5 bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2">
               <DollarSign className="w-4 h-4 text-emerald-400 shrink-0" />
               <div className="w-full">
                 <label className="block text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
-                  Session Price Goal (Max CAD)
+                  Price Goal (+20% Flex)
                 </label>
                 <input
                   type="number"
                   min="10"
-                  max="500"
+                  max="2000"
                   step="1"
                   value={priceGoalCad}
                   onChange={(e) => setPriceGoalCad(e.target.value)}
@@ -292,7 +315,7 @@ export default function App() {
               <span className="text-xs text-slate-400 font-medium">CAD</span>
             </div>
 
-            <div className="sm:col-span-3 flex items-stretch">
+            <div className="sm:col-span-2 flex items-stretch">
               <button
                 type="submit"
                 disabled={loading}
